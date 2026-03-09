@@ -3,181 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sultana's Atlas | أطلس السلطانة</title>
+    <title>أطلس السلطانة | طريق القوافل</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&display=swap');
         
-        :root {
-            --royal-gold: #d4af37;
-            --deep-emerald: #013220;
-            --paper: #f4ece1;
-            --dark: #1a1a1a;
-        }
+        :root { --gold: #d4af37; --emerald: #013220; --sand: #f4ece1; --accent: #a52a2a; }
 
         body { 
-            font-family: 'Amiri', serif; background-color: var(--paper); 
-            margin: 0; padding: 0; color: var(--dark);
-            background-image: url('https://www.transparenttextures.com/patterns/pinstriped-suit.png');
+            font-family: 'Amiri', serif; margin: 0; padding: 0; 
+            background: var(--sand) no-repeat center center fixed; background-size: cover;
+            color: var(--emerald); transition: 0.5s;
         }
 
-        /* الهيدر الملكي */
-        .header { 
-            background: var(--deep-emerald); color: var(--royal-gold); 
-            padding: 20px; text-align: center; border-bottom: 4px solid var(--royal-gold);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        .status-bar {
+            background: rgba(1, 50, 32, 0.9); color: var(--gold);
+            padding: 10px; display: flex; justify-content: space-around;
+            border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 1000;
         }
-        .header h1 { font-family: 'Aref Ruqaa', serif; margin: 0; font-size: 2.2em; }
 
-        /* الأقسام */
-        .container { padding: 15px; max-width: 800px; margin: auto; }
-        .section-title { border-right: 5px solid var(--royal-gold); padding-right: 10px; margin: 25px 0 15px; color: var(--deep-emerald); }
+        .container { padding: 15px; max-width: 500px; margin: auto; }
 
-        /* كروت الولايات */
-        .atlas-scroll { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; scroll-snap-type: x mandatory; }
-        .city-card { 
-            flex: 0 0 85%; scroll-snap-align: center; background: white; 
-            border-radius: 20px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        .game-card {
+            background: rgba(255, 255, 255, 0.92); border-radius: 25px;
+            padding: 20px; border: 2px solid var(--gold);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
+            backdrop-filter: blur(8px);
         }
-        .city-img { width: 100%; height: 200px; object-fit: cover; }
-        .city-info { padding: 15px; }
 
-        /* جدول السلع التجاري */
-        .trade-table { 
-            width: 100%; border-collapse: collapse; background: white; 
-            border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        .city-img {
+            width: 100%; height: 200px; object-fit: cover;
+            border-radius: 20px; border: 2px solid var(--gold); margin-bottom: 15px;
         }
-        .trade-table th { background: var(--deep-emerald); color: var(--royal-gold); padding: 12px; }
-        .trade-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; }
 
-        /* لوحة تحكم السلطانة (المخفية) */
-        #adminPanel { 
-            display: none; background: #fff; border: 3px double var(--royal-gold); 
-            padding: 20px; border-radius: 20px; margin: 20px 0;
+        .btn {
+            background: var(--emerald); color: var(--gold);
+            border: 2px solid var(--gold); padding: 12px;
+            border-radius: 12px; width: 100%; margin: 6px 0;
+            font-family: 'Aref Ruqaa'; font-size: 1.1em; cursor: pointer;
         }
-        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ccc; font-family: 'Amiri'; }
-        .btn-gold { background: var(--royal-gold); color: var(--deep-emerald); font-weight: bold; border: none; cursor: pointer; }
 
-        .floating-admin {
+        .btn-travel { background: var(--accent); color: white; }
+
+        #adminPanel {
+            display: none; background: white; border-radius: 20px;
+            padding: 20px; border: 4px double var(--gold); margin-top: 20px;
+        }
+
+        .admin-btn-float {
             position: fixed; bottom: 20px; left: 20px; width: 50px; height: 50px;
-            background: var(--deep-emerald); color: var(--royal-gold); border-radius: 50%;
-            display: none; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; z-index: 1000;
+            background: var(--emerald); border-radius: 50%; display: none;
+            align-items: center; justify-content: center; font-size: 24px; z-index: 1000;
         }
     </style>
 </head>
-<body>
+<body id="gameBody">
 
-    <div class="header">
-        <h1>أطلس السلطانة</h1>
-        <p>تجارة، تاريخ، وجمال الجزائر 🇩🇿</p>
+    <div class="status-bar">
+        <div>الذهب: <span id="goldText">500</span> 💰</div>
+        <div>الموقع: <span id="locText">غرداية</span> 📍</div>
     </div>
 
     <div class="container">
-        <h3 class="section-title">معالم الولايات</h3>
-        <div id="atlasGrid" class="atlas-scroll">
-            </div>
+        <div class="game-card">
+            <img id="currentCityImg" src="https://via.placeholder.com/400x200?text=Sultana+Atlas" class="city-img">
+            <h2 id="cityTitle">غرداية</h2>
+            <p id="cityDesc">توابل قوية وزرابي ثمينة.</p>
+            <div id="cargoInfo" style="font-weight: bold; color: var(--accent); margin: 10px 0;">المخزن: فارغ</div>
 
-        <h3 class="section-title">سوق السلع الوطنية</h3>
-        <table class="trade-table">
-            <thead>
-                <tr>
-                    <th>السلعة</th>
-                    <th>الولاية المصدرة</th>
-                    <th>السعر (دج)</th>
-                </tr>
-            </thead>
-            <tbody id="goodsTable">
-                </tbody>
-        </table>
+            <button class="btn" onclick="trade('buy')">شراء السلعة المحلية 💰</button>
+            <button class="btn" onclick="trade('sell')">بيع ما أحمله ⚖️</button>
+            
+            <h4 style="margin: 15px 0 5px;">وجهة القافلة القادمة:</h4>
+            <select id="travelSelect" class="btn" style="background: white; color: black;"></select>
+            <button class="btn btn-travel" onclick="travel()">انطلاق القافلة 🐪</button>
+        </div>
 
         <div id="adminPanel">
-            <h2 style="text-align:center; color:var(--deep-emerald)">🛠 إدارة المملكة</h2>
-            <hr>
-            <p><b>1. إضافة ولاية وصورة:</b></p>
-            <input type="text" id="cityName" placeholder="اسم الولاية">
-            <input type="file" id="cityImg" accept="image/*" onchange="encodeImg(this)">
-            <input type="hidden" id="imgData">
-            <button class="btn-gold" onclick="saveCity()">إضافة للرحلة 🏰</button>
-            <hr>
-            <p><b>2. إضافة سلعة للسوق:</b></p>
-            <input type="text" id="goodName" placeholder="اسم السلعة (مثلاً: تمور دقلة نور)">
-            <input type="text" id="goodOrigin" placeholder="الولاية (مثلاً: بسكرة)">
-            <input type="number" id="goodPrice" placeholder="السعر">
-            <button class="btn-gold" style="background:#013220; color:white" onclick="saveGood()">إضافة للسوق 💰</button>
+            <h3 style="text-align:center">👑 لوحة السلطانة مها</h3>
+            <p>رفع صورة لهذه الولاية:</p>
+            <input type="file" onchange="uploadCityImg(this)">
+            <button class="btn" onclick="toggleAdmin()">إغلاق</button>
         </div>
     </div>
 
-    <div id="adminBtn" class="floating-admin" onclick="toggleAdmin()">🗝️</div>
+    <div id="adminBtn" class="admin-btn-float" onclick="toggleAdmin()">👑</div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const ADMIN_ID = 8421694319; // معرفكِ يا مها (زينب سابقاً)
+    const MY_ID = 8421694319;
+
     const firebaseConfig = { databaseURL: "https://allahfirst-b9c52-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    tg.expand();
+    // البيانات التي قدمتيها يا مها
+    const atlasData = {
+        "غرداية": { item: "توابل وزرابي", price: 80, desc: "توابل غرداية هي الأقوى، والزرابي سلعة لا تفسد." },
+        "تلمسان": { item: "منسوجات وحرير", price: 150, desc: "قماش فاخر ولباس تقليدي أصيل." },
+        "وهران": { item: "ذهب ومجوهرات", price: 500, desc: "قطب الذهب والحلي والمجوهرات." },
+        "برج بوعريريج": { item: "قمح وآلات", price: 120, desc: "مخزن الحبوب وعاصمة التجارة والتجهيزات." },
+        "الجزائر العاصمة": { item: "سلع بحرية", price: 200, desc: "ميناء المحروسة ونقطة التقاء السلع." },
+        "قسنطينة": { item: "نحاس ومقطرات", price: 180, desc: "نحاس منقوش وماء ورد مركز." },
+        "عنابة": { item: "مرجان", price: 400, desc: "سلعة نادرة وقيمة عالية جداً." },
+        "تمنراست": { item: "فضة وبخور", price: 250, desc: "مركز تجارة التروك والفضة التارقية." },
+        "تيزي وزو": { item: "زيت وفخار", price: 90, desc: "زيت زيتون أصيل في ظروف جلدية." },
+        "باتنة": { item: "صوف وجلود", price: 70, desc: "صوف وجلود تمون الشمال والجنوب." }
+    };
 
-    // إظهار زر التحكم للسلطانة فقط
-    if (tg.initDataUnsafe.user?.id === ADMIN_ID) {
-        document.getElementById('adminBtn').style.display = 'flex';
+    let state = {
+        gold: 1000,
+        currentCity: "غرداية",
+        cargo: null,
+        cargoBuyPrice: 0
+    };
+
+    function init() {
+        if (tg.initDataUnsafe.user?.id === MY_ID) document.getElementById('adminBtn').style.display = 'flex';
+        
+        const select = document.getElementById('travelSelect');
+        Object.keys(atlasData).forEach(city => {
+            let opt = document.createElement('option');
+            opt.value = city; opt.innerText = city;
+            select.appendChild(opt);
+        });
+        updateUI();
+    }
+
+    function updateUI() {
+        const data = atlasData[state.currentCity];
+        document.getElementById('goldText').innerText = state.gold;
+        document.getElementById('locText').innerText = state.currentCity;
+        document.getElementById('cityTitle').innerText = state.currentCity;
+        document.getElementById('cityDesc').innerText = data.desc;
+        document.getElementById('cargoInfo').innerText = state.cargo ? "المخزن: " + state.cargo : "المخزن: فارغ";
+        
+        db.ref('cities_images/' + state.currentCity).once('value', snap => {
+            if(snap.val()) document.getElementById('currentCityImg').src = snap.val();
+        });
+    }
+
+    function trade(type) {
+        const data = atlasData[state.currentCity];
+        if (type === 'buy' && !state.cargo) {
+            if (state.gold >= data.price) {
+                state.gold -= data.price;
+                state.cargo = data.item;
+                state.cargoBuyPrice = data.price;
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+        } else if (type === 'sell' && state.cargo) {
+            // ربح عشوائي بين 20% إلى 50% فوق سعر الشراء
+            let profit = Math.floor(state.cargoBuyPrice * (1.2 + Math.random() * 0.3));
+            state.gold += profit;
+            state.cargo = null;
+            tg.HapticFeedback.impactOccurred('heavy');
+            alert("بعت السلعة بربح قدره: " + (profit - state.cargoBuyPrice) + " ذهبة");
+        }
+        updateUI();
+    }
+
+    function travel() {
+        const nextCity = document.getElementById('travelSelect').value;
+        if (nextCity === state.currentCity) return alert("أنت فيها بالفعل!");
+        
+        // أحجية بسيطة للسفر
+        let question = "ما اسم السلعة المشهورة في " + nextCity + "؟";
+        let answer = prompt(question);
+        
+        if (answer && atlasData[nextCity].item.includes(answer)) {
+            state.currentCity = nextCity;
+            updateUI();
+            tg.HapticFeedback.impactOccurred('medium');
+        } else {
+            alert("إجابة خاطئة! ضاعت القافلة في الرمال.");
+        }
     }
 
     function toggleAdmin() {
         const p = document.getElementById('adminPanel');
         p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        window.scrollTo(0, p.offsetTop);
     }
 
-    // معالجة الصور المرفوعة من الهاتف
-    function encodeImg(input) {
+    function uploadCityImg(input) {
         const reader = new FileReader();
-        reader.onload = (e) => { document.getElementById('imgData').value = e.target.result; };
+        reader.onload = (e) => {
+            db.ref('cities_images/' + state.currentCity).set(e.target.result);
+            document.getElementById('currentCityImg').src = e.target.result;
+            alert("تم حفظ الصورة لهذه الولاية!");
+        };
         reader.readAsDataURL(input.files[0]);
     }
 
-    // حفظ البيانات في فايبرس
-    function saveCity() {
-        const name = document.getElementById('cityName').value;
-        const img = document.getElementById('imgData').value;
-        if(name && img) {
-            db.ref('sultana_atlas/cities').push({ name, img });
-            alert("تمت إضافة " + name + " للأطلس!");
-        }
-    }
-
-    function saveGood() {
-        const name = document.getElementById('goodName').value;
-        const origin = document.getElementById('goodOrigin').value;
-        const price = document.getElementById('goodPrice').value;
-        if(name && origin && price) {
-            db.ref('sultana_atlas/goods').push({ name, origin, price });
-            alert("تم تحديث قائمة الأسعار!");
-        }
-    }
-
-    // عرض البيانات تلقائياً
-    db.ref('sultana_atlas/cities').on('value', snap => {
-        const div = document.getElementById('atlasGrid'); div.innerHTML = "";
-        snap.forEach(c => {
-            const data = c.val();
-            div.innerHTML += `<div class="city-card">
-                <img src="${data.img}" class="city-img">
-                <div class="city-info"><h3>${data.name}</h3></div>
-            </div>`;
-        });
-    });
-
-    db.ref('sultana_atlas/goods').on('value', snap => {
-        const table = document.getElementById('goodsTable'); table.innerHTML = "";
-        snap.forEach(g => {
-            const data = g.val();
-            table.innerHTML += `<tr><td>${data.name}</td><td>${data.origin}</td><td>${data.price}</td></tr>`;
-        });
-    });
-
+    tg.expand();
+    init();
 </script>
 </body>
 </html>

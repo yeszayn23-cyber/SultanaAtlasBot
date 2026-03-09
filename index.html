@@ -3,202 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>أطلس السلطانة | طريق القوافل</title>
+    <title>إمبراطورية السلطانة | عهد الزواج</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Aref+Ruqaa:wght@700&display=swap');
         
-        :root { --gold: #d4af37; --emerald: #013220; --sand: #f4ece1; --accent: #a52a2a; }
+        :root { --gold: #d4af37; --emerald: #013220; }
 
-        body { 
-            font-family: 'Amiri', serif; margin: 0; padding: 0; 
-            background: var(--sand) no-repeat center center fixed; background-size: cover;
-            color: var(--emerald); transition: 0.5s;
+        body {
+            font-family: 'Amiri', serif; background: #1a1a1a; color: white;
+            margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center;
+            transition: background 0.5s;
         }
 
-        .status-bar {
-            background: rgba(1, 50, 32, 0.9); color: var(--gold);
-            padding: 10px; display: flex; justify-content: space-around;
-            border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 1000;
+        /* شريط التطوير الملكي */
+        .royal-progress {
+            width: 100%; background: rgba(0,0,0,0.8); padding: 10px 0;
+            border-bottom: 2px solid var(--gold); text-align: center;
+        }
+        .progress-track {
+            width: 90%; height: 15px; background: #333; border-radius: 10px;
+            margin: 10px auto; border: 1px solid var(--gold); overflow: hidden;
+        }
+        #progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--gold), #fff); transition: 1s; }
+
+        /* منطقة الشرح التلقائي */
+        .info-panel {
+            width: 90%; background: rgba(255,255,255,0.1); border-radius: 10px;
+            padding: 10px; margin: 10px 0; font-size: 0.9em; border-left: 5px solid var(--gold);
         }
 
-        .container { padding: 15px; max-width: 500px; margin: auto; }
+        /* رقعة اللعب */
+        .game-grid {
+            width: 320px; height: 320px; background: #2c3e50; border-radius: 15px;
+            padding: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            position: relative; border: 5px solid var(--gold);
+        }
+        .cell { background: rgba(255,255,255,0.05); border-radius: 8px; }
 
-        .game-card {
-            background: rgba(255, 255, 255, 0.92); border-radius: 25px;
-            padding: 20px; border: 2px solid var(--gold);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
-            backdrop-filter: blur(8px);
+        .tile {
+            position: absolute; width: 70px; height: 70px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            background-size: cover; background-position: center; transition: 0.15s;
+            font-size: 0; /* نخفي الأرقام لتظهر الصور فقط */
         }
 
-        .city-img {
-            width: 100%; height: 200px; object-fit: cover;
-            border-radius: 20px; border: 2px solid var(--gold); margin-bottom: 15px;
+        /* العبارات الملكية */
+        #royal-quote { font-family: 'Aref Ruqaa'; color: var(--gold); margin: 15px; font-size: 1.2em; }
+
+        /* صورة الزواج (تظهر في المستوى 100) */
+        #wedding-view {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            z-index: 2000; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        .btn {
-            background: var(--emerald); color: var(--gold);
-            border: 2px solid var(--gold); padding: 12px;
-            border-radius: 12px; width: 100%; margin: 6px 0;
-            font-family: 'Aref Ruqaa'; font-size: 1.1em; cursor: pointer;
+        /* لوحة التحكم */
+        #admin-panel {
+            display: none; position: fixed; inset: 0; background: #111; z-index: 3000;
+            padding: 20px; overflow-y: auto;
         }
+        .admin-section { border: 1px solid var(--gold); padding: 10px; margin-bottom: 15px; border-radius: 10px; }
 
-        .btn-travel { background: var(--accent); color: white; }
-
-        #adminPanel {
-            display: none; background: white; border-radius: 20px;
-            padding: 20px; border: 4px double var(--gold); margin-top: 20px;
-        }
-
-        .admin-btn-float {
-            position: fixed; bottom: 20px; left: 20px; width: 50px; height: 50px;
-            background: var(--emerald); border-radius: 50%; display: none;
-            align-items: center; justify-content: center; font-size: 24px; z-index: 1000;
-        }
+        .btn-float { position: fixed; bottom: 20px; right: 20px; background: var(--gold); 
+                    width: 50px; height: 50px; border-radius: 50%; display: flex; 
+                    align-items: center; justify-content: center; cursor: pointer; }
     </style>
 </head>
-<body id="gameBody">
+<body>
 
-    <div class="status-bar">
-        <div>الذهب: <span id="goldText">500</span> 💰</div>
-        <div>الموقع: <span id="locText">غرداية</span> 📍</div>
+    <div class="royal-progress">
+        <div>مستوى بناء القصر: <span id="lvl-text">1</span> / 100</div>
+        <div class="progress-track"><div id="progress-fill"></div></div>
+        <div id="status-msg">أهلاً بك في مهد الإمبراطورية</div>
     </div>
 
-    <div class="container">
-        <div class="game-card">
-            <img id="currentCityImg" src="https://via.placeholder.com/400x200?text=Sultana+Atlas" class="city-img">
-            <h2 id="cityTitle">غرداية</h2>
-            <p id="cityDesc">توابل قوية وزرابي ثمينة.</p>
-            <div id="cargoInfo" style="font-weight: bold; color: var(--accent); margin: 10px 0;">المخزن: فارغ</div>
-
-            <button class="btn" onclick="trade('buy')">شراء السلعة المحلية 💰</button>
-            <button class="btn" onclick="trade('sell')">بيع ما أحمله ⚖️</button>
-            
-            <h4 style="margin: 15px 0 5px;">وجهة القافلة القادمة:</h4>
-            <select id="travelSelect" class="btn" style="background: white; color: black;"></select>
-            <button class="btn btn-travel" onclick="travel()">انطلاق القافلة 🐪</button>
-        </div>
-
-        <div id="adminPanel">
-            <h3 style="text-align:center">👑 لوحة السلطانة مها</h3>
-            <p>رفع صورة لهذه الولاية:</p>
-            <input type="file" onchange="uploadCityImg(this)">
-            <button class="btn" onclick="toggleAdmin()">إغلاق</button>
-        </div>
+    <div class="info-panel" id="item-guide">
+        💡 دليل السلع: ادمج السلع لتطوير قصرك والوصول لعرس السلطانة!
     </div>
 
-    <div id="adminBtn" class="admin-btn-float" onclick="toggleAdmin()">👑</div>
+    <div id="royal-quote">"بداية رحلة الألف ميل تبدأ بتمرة"</div>
+
+    <div class="game-grid" id="grid">
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    </div>
+
+    <div class="btn-float" onclick="toggleAdmin()">👑</div>
+
+    <div id="wedding-view">
+        <h1 style="color:var(--gold)">🎉 تم زواج السلطانة والتاجر! 🎉</h1>
+        <img id="wedding-img" src="" style="width:90%; border-radius:20px; border:5px solid var(--gold)">
+        <button onclick="location.reload()" style="padding:15px; margin-top:20px;">بدء عهد جديد</button>
+    </div>
+
+    <div id="admin-panel">
+        <h2 style="color:var(--gold)">⚙️ إعدادات السلطانة</h2>
+        
+        <div class="admin-section">
+            <p>تغيير لون الخلفية:</p>
+            <input type="color" onchange="document.body.style.background = this.value">
+        </div>
+
+        <div class="admin-section">
+            <p>رفع صور السلع (2، 4، 8...):</p>
+            <div id="upload-grid"></div>
+        </div>
+
+        <div class="admin-section">
+            <p>صورة الزفاف (المستوى 100):</p>
+            <input type="file" onchange="uploadWedding(this)">
+        </div>
+
+        <div class="admin-section">
+            <p>تعديل عبارة المستوى الحالي:</p>
+            <input type="text" id="quote-input" style="width:100%; padding:10px;">
+            <button onclick="saveQuote()">حفظ العبارة</button>
+        </div>
+
+        <button onclick="toggleAdmin()" style="width:100%; padding:15px; background:var(--gold); border:none;">عودة للعبة</button>
+    </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const MY_ID = 8421694319;
-
+    const MY_ID = 8421694319; 
     const firebaseConfig = { databaseURL: "https://allahfirst-b9c52-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // البيانات التي قدمتيها يا مها
-    const atlasData = {
-        "غرداية": { item: "توابل وزرابي", price: 80, desc: "توابل غرداية هي الأقوى، والزرابي سلعة لا تفسد." },
-        "تلمسان": { item: "منسوجات وحرير", price: 150, desc: "قماش فاخر ولباس تقليدي أصيل." },
-        "وهران": { item: "ذهب ومجوهرات", price: 500, desc: "قطب الذهب والحلي والمجوهرات." },
-        "برج بوعريريج": { item: "قمح وآلات", price: 120, desc: "مخزن الحبوب وعاصمة التجارة والتجهيزات." },
-        "الجزائر العاصمة": { item: "سلع بحرية", price: 200, desc: "ميناء المحروسة ونقطة التقاء السلع." },
-        "قسنطينة": { item: "نحاس ومقطرات", price: 180, desc: "نحاس منقوش وماء ورد مركز." },
-        "عنابة": { item: "مرجان", price: 400, desc: "سلعة نادرة وقيمة عالية جداً." },
-        "تمنراست": { item: "فضة وبخور", price: 250, desc: "مركز تجارة التروك والفضة التارقية." },
-        "تيزي وزو": { item: "زيت وفخار", price: 90, desc: "زيت زيتون أصيل في ظروف جلدية." },
-        "باتنة": { item: "صوف وجلود", price: 70, desc: "صوف وجلود تمون الشمال والجنوب." }
-    };
+    let level = 1;
+    let xp = 0;
+    let customImages = {};
+    let quotes = {};
+    let board = Array(4).fill().map(() => Array(4).fill(0));
 
-    let state = {
-        gold: 1000,
-        currentCity: "غرداية",
-        cargo: null,
-        cargoBuyPrice: 0
-    };
-
-    function init() {
-        if (tg.initDataUnsafe.user?.id === MY_ID) document.getElementById('adminBtn').style.display = 'flex';
-        
-        const select = document.getElementById('travelSelect');
-        Object.keys(atlasData).forEach(city => {
-            let opt = document.createElement('option');
-            opt.value = city; opt.innerText = city;
-            select.appendChild(opt);
-        });
-        updateUI();
-    }
-
-    function updateUI() {
-        const data = atlasData[state.currentCity];
-        document.getElementById('goldText').innerText = state.gold;
-        document.getElementById('locText').innerText = state.currentCity;
-        document.getElementById('cityTitle').innerText = state.currentCity;
-        document.getElementById('cityDesc').innerText = data.desc;
-        document.getElementById('cargoInfo').innerText = state.cargo ? "المخزن: " + state.cargo : "المخزن: فارغ";
-        
-        db.ref('cities_images/' + state.currentCity).once('value', snap => {
-            if(snap.val()) document.getElementById('currentCityImg').src = snap.val();
-        });
-    }
-
-    function trade(type) {
-        const data = atlasData[state.currentCity];
-        if (type === 'buy' && !state.cargo) {
-            if (state.gold >= data.price) {
-                state.gold -= data.price;
-                state.cargo = data.item;
-                state.cargoBuyPrice = data.price;
-                tg.HapticFeedback.notificationOccurred('success');
-            }
-        } else if (type === 'sell' && state.cargo) {
-            // ربح عشوائي بين 20% إلى 50% فوق سعر الشراء
-            let profit = Math.floor(state.cargoBuyPrice * (1.2 + Math.random() * 0.3));
-            state.gold += profit;
-            state.cargo = null;
-            tg.HapticFeedback.impactOccurred('heavy');
-            alert("بعت السلعة بربح قدره: " + (profit - state.cargoBuyPrice) + " ذهبة");
-        }
-        updateUI();
-    }
-
-    function travel() {
-        const nextCity = document.getElementById('travelSelect').value;
-        if (nextCity === state.currentCity) return alert("أنت فيها بالفعل!");
-        
-        // أحجية بسيطة للسفر
-        let question = "ما اسم السلعة المشهورة في " + nextCity + "؟";
-        let answer = prompt(question);
-        
-        if (answer && atlasData[nextCity].item.includes(answer)) {
-            state.currentCity = nextCity;
-            updateUI();
-            tg.HapticFeedback.impactOccurred('medium');
-        } else {
-            alert("إجابة خاطئة! ضاعت القافلة في الرمال.");
-        }
-    }
+    // تهيئة لوحة الرفع
+    const nums = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+    nums.forEach(n => {
+        let d = document.createElement('div');
+        d.innerHTML = `${n}: <input type="file" onchange="uploadItemImg(this, ${n})">`;
+        document.getElementById('upload-grid').appendChild(d);
+    });
 
     function toggleAdmin() {
-        const p = document.getElementById('adminPanel');
-        p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        if(tg.initDataUnsafe.user?.id === MY_ID) {
+            const p = document.getElementById('admin-panel');
+            p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        }
     }
 
-    function uploadCityImg(input) {
+    function uploadItemImg(input, n) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            db.ref('cities_images/' + state.currentCity).set(e.target.result);
-            document.getElementById('currentCityImg').src = e.target.result;
-            alert("تم حفظ الصورة لهذه الولاية!");
+            db.ref('items/' + n).set(e.target.result);
+            alert(`تم تغيير صورة السلعة رقم ${n}`);
         };
         reader.readAsDataURL(input.files[0]);
     }
 
+    function uploadWedding(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => db.ref('wedding_img').set(e.target.result);
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function saveQuote() {
+        const text = document.getElementById('quote-input').value;
+        db.ref('quotes/' + level).set(text);
+        alert("تم حفظ العبارة لهذا المستوى!");
+    }
+
+    // مزامنة البيانات
+    db.ref().on('value', snap => {
+        const data = snap.val();
+        if(data.items) {
+            customImages = data.items;
+            updateGuide(data.items);
+            draw();
+        }
+        if(data.quotes) quotes = data.quotes;
+        if(data.wedding_img) document.getElementById('wedding-img').src = data.wedding_img;
+    });
+
+    function updateGuide(items) {
+        let guideText = "💡 دليل السلع: ";
+        Object.keys(items).forEach(k => guideText += ` [صورة ${k}] `);
+        document.getElementById('item-guide').innerText = guideText;
+    }
+
+    function gainXP(v) {
+        xp += v;
+        let newLvl = Math.floor(xp / 100) + 1;
+        level = newLvl;
+        
+        document.getElementById('lvl-text').innerText = level;
+        document.getElementById('progress-fill').style.width = level + "%";
+        document.getElementById('royal-quote').innerText = quotes[level] || "استمر في الدمج للوصول للقمة!";
+
+        if(level >= 100) {
+            document.getElementById('wedding-view').style.display = 'flex';
+        }
+    }
+
+    // منطق اللعبة (مختصر للعرض)
+    function addTile() {
+        let empty = [];
+        for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(board[r][c] === 0) empty.push({r,c});
+        if(empty.length) {
+            let {r,c} = empty[Math.floor(Math.random()*empty.length)];
+            board[r][c] = 2;
+        }
+    }
+
+    function draw() {
+        const g = document.getElementById('grid');
+        document.querySelectorAll('.tile').forEach(t => t.remove());
+        board.forEach((row, r) => {
+            row.forEach((v, c) => {
+                if(v) {
+                    let t = document.createElement('div');
+                    t.className = 'tile';
+                    t.style.top = (r*77+10)+'px'; t.style.left = (c*77+10)+'px';
+                    if(customImages[v]) t.style.backgroundImage = `url(${customImages[v]})`;
+                    else t.style.background = '#d4af37';
+                    g.appendChild(t);
+                }
+            });
+        });
+    }
+
+    // نظام اللمس وحركة اللعبة (أضيفي الكود السابق للحركة هنا)
+    document.addEventListener('touchend', () => { gainXP(10); addTile(); draw(); });
+
     tg.expand();
-    init();
+    addTile(); addTile(); draw();
 </script>
 </body>
 </html>
